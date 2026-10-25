@@ -29,16 +29,25 @@ async function runParser() {
 
         // 1. Parse raw CSV records
         const parser = new CsvSyncParser();
-        const records = parser.parse(fileContent);
-        console.log(`Successfully parsed ${records.length} highlights.`);
+        const rawRecords = parser.parse(fileContent);
+        console.log(`Successfully parsed ${rawRecords.length} highlights.`);
         
-        // 2. Reverse the array to go from first-to-last (chronological order)
+        // 2. Filter to keep only yellow highlights
+        // (Adjust property name if your CSV uses 'Color' vs 'color')
+        const records = rawRecords.filter(record => {
+        	const color = (record.color || record.Color || '').trim().toUpperCase();
+        	// If color is empty or undefined, you can choose whether to keep it or skip it.
+            	// Here we strictly check for 'YELLOW' (or you can remove the filter if some have no color assigned).
+            	return color === 'YELLOW' || color === '';
+    	});
+        
+        // 3. Reverse the array to go from first-to-last (chronological order)
         records.reverse();
-        console.log('Successfully parsed ${records.length} highlights.');
+        console.log(`Parsed ${rawRecords.length} total highlights, kept ${records.length} yellow highlights.`);
 
         //const formatter = new MarkdownFormatter();
 
-        // 3. Group records by Book Title, then by Chapter Title
+        // 4. Group records by Book Title, then by Chapter Title
         const books = {};
         for (const record of records) {
             const bookTitle = record.bookTitle || 'Unknown Book';
@@ -56,7 +65,7 @@ async function runParser() {
             books[bookTitle][chapterTitle].push(cleanQuote);
         }
 
-        // 4. Generate clean Markdown files per book
+        // 5. Generate clean Markdown files per book
         for (const [bookTitle, chapters] of Object.entries(books)) {
             const safeFileName = bookTitle.replace(/[\/\\?%*:|"<>]/g, '_') + '.md';
             const outPath = path.join(outputDirectory, safeFileName);
